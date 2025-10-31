@@ -38,6 +38,29 @@ services:
       - "9090:9090"
     restart: unless-stopped
 
+
+  ewm-service:
+    build:
+      context: ./main-service
+      dockerfile: Dockerfile
+    container_name: ewm-main-service
+    environment:
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  ewm-db:
+    image: postgres:16.1
+    container_name: ewm-main-db
+    environment:
+      POSTGRES_DB: ewm-main
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+
 volumes:
   stats_db_data:
 

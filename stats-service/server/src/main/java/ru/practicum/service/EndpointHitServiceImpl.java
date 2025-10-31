@@ -4,6 +4,7 @@ package ru.practicum.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import ru.practicum.dto.EndpointHitDto;
 import ru.practicum.dto.ViewStatsDto;
@@ -13,18 +14,19 @@ import ru.practicum.model.EndpointHit;
 import ru.practicum.repository.EndpointHitRepository;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class EndpointHitServiceImpl implements EndpointHitService {
 
     private final EndpointHitRepository repository;
 
 
     @Override
+    @Transactional
     public EndpointHit saveHit(EndpointHitDto dto) {
         if (dto == null) {
             log.warn("Body must not be null");
@@ -77,7 +79,7 @@ public class EndpointHitServiceImpl implements EndpointHitService {
         return result;
     }
 
-    private void  validateRange(LocalDateTime start, LocalDateTime end) {
+    private void validateRange(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) {
             log.warn("start and end must be provided");
             throw new ValidationException("start and end must be provided");
