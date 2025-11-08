@@ -35,7 +35,6 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     private final ParticipationRequestRepository requestRepository;
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
-    private final Long MAX_VALUE = (long) Integer.MAX_VALUE;
 
     @Override
     @Transactional
@@ -170,7 +169,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
 
         boolean unlimited = event.getParticipantLimit() == null || event.getParticipantLimit() == 0;
         long confirmed = requestRepository.countByEventIdAndStatus(eventId, RequestStatus.CONFIRMED);
-        long limit = unlimited ? MAX_VALUE : event.getParticipantLimit();
+        long limit = unlimited ? Long.MAX_VALUE : event.getParticipantLimit();
 
         if (request.getStatus() == RequestStatus.CONFIRMED && confirmed >= limit) {
             log.warn("Participant limit reached");
