@@ -28,11 +28,11 @@ public class EndpointHitDto {
     private String uri;
 
     @NotBlank
-    @Size(max = 65, message = "ip must not exceed 65 characters")
+    @Size(max = 64, message = "ip must not exceed 64 characters")
     private String ip;
 
     @NotNull
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = DateTimeConstants.PATTERN)
     private LocalDateTime timestamp;
 
 }
