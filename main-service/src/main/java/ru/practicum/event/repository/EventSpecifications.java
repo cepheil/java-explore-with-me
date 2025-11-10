@@ -1,5 +1,7 @@
 package ru.practicum.event.repository;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import ru.practicum.event.enums.EventState;
 import ru.practicum.event.model.Event;
@@ -9,10 +11,8 @@ import ru.practicum.request.model.ParticipationRequest;
 import java.time.LocalDateTime;
 import java.util.List;
 
-
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class EventSpecifications {
-    private EventSpecifications() {
-    }
 
     public static Specification<Event> publishedBetween(LocalDateTime start, LocalDateTime end) {
         return (root, query, criteriaBuilder) -> criteriaBuilder.and(

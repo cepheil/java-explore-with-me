@@ -2,8 +2,6 @@ package ru.practicum.request.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.request.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.request.dto.EventRequestStatusUpdateResult;
@@ -12,8 +10,7 @@ import ru.practicum.request.service.ParticipationRequestService;
 
 import java.util.List;
 
-@Slf4j
-@Validated
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/users/{userId}/events/{eventId}/requests")
