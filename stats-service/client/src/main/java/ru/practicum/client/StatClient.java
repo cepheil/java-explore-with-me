@@ -6,14 +6,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.util.UriComponentsBuilder;
 import ru.practicum.dto.DateTimeConstants;
 import ru.practicum.dto.EndpointHitDto;
 import ru.practicum.dto.ViewStatsDto;
 import org.springframework.http.HttpStatusCode;
 
-import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -23,24 +20,23 @@ import java.util.List;
 public class StatClient {
 
     private final RestClient restClient;
-    private final String baseUrl;
 
     public StatClient(@Value("${stats-server.url}") String baseUrl) {
-        this.baseUrl = baseUrl;
         this.restClient = RestClient.create(baseUrl);
+        log.info("Stats client initialized. Base URL: {}", baseUrl);
     }
 
     public void saveHit(EndpointHitDto hit) {
         try {
             restClient.post()
                     .uri("/hit")
-                    .body(hit).retrieve()
+                    .body(hit)
+                    .retrieve()
                     .toBodilessEntity();
 
             log.debug("Hit sent to stats-service: app={}, uri={}, ip={}", hit.getApp(), hit.getUri(), hit.getIp());
-
-        } catch (RestClientException e) {
-            log.error("Failed to send hit to stats-service: {}", e.getMessage());
+        } catch (Exception e) {
+            log.warn("Hit skipped: {}", e.toString());
         }
     }
 
@@ -49,22 +45,24 @@ public class StatClient {
                                        List<String> uris,
                                        Boolean unique) {
         try {
-            UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/stats")
-                    .queryParam("start", start.format(DateTimeConstants.FORMATTER))
-                    .queryParam("end", end.format(DateTimeConstants.FORMATTER));
-
-            if (uris != null && !uris.isEmpty()) {
-                uris.forEach(uri -> builder.queryParam("uris", uri));
+            if (start == null || end == null) {
+                log.debug("Stats skipped: start/end is null");
+                return Collections.emptyList();
             }
-
-            if (unique != null) {
-                builder.queryParam("unique", unique);
-            }
-
-            URI uri = builder.build(true).toUri();
 
             List<ViewStatsDto> result = restClient.get()
-                    .uri(uri)
+                    .uri(b -> {
+                        var ub = b.path("/stats")
+                                .queryParam("start", start.format(DateTimeConstants.FORMATTER))
+                                .queryParam("end", end.format(DateTimeConstants.FORMATTER));
+                        if (uris != null && !uris.isEmpty()) {
+                            uris.forEach(u -> ub.queryParam("uris", u));
+                        }
+                        if (unique != null) {
+                            ub.queryParam("unique", unique);
+                        }
+                        return ub.build();
+                    })
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (request, response) -> {
                         log.error("Stats service error: {} {}", response.getStatusCode(), response.getStatusText());
@@ -80,12 +78,11 @@ public class StatClient {
 
             return result != null ? result : Collections.emptyList();
 
-        } catch (RestClientException e) {
-            log.error("Failed to get stats from stats-service: {}", e.getMessage());
-            return List.of();
+        } catch (Exception e) {
+            log.error("Failed to get stats from stats-service: {}", e.toString());
+            return Collections.emptyList();
         }
 
     }
-
 
 }
