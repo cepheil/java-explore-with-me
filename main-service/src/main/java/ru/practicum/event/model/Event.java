@@ -3,6 +3,7 @@ package ru.practicum.event.model;
 import jakarta.persistence.*;
 import lombok.*;
 import ru.practicum.category.model.Category;
+import ru.practicum.event.enums.CommentableBy;
 import ru.practicum.event.enums.EventState;
 import ru.practicum.user.model.User;
 
@@ -38,7 +39,7 @@ public class Event {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "initiator_id", nullable = false)
-    private User initiator;   //UserShortDto
+    private User initiator;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "location_id", nullable = false)
@@ -65,6 +66,12 @@ public class Event {
 
     @Column(name = "request_moderation", nullable = false)
     private Boolean requestModeration;
+
+    //
+    @Enumerated(EnumType.STRING)
+    @Column(name = "commentable_by", nullable = false)
+    @Builder.Default
+    private CommentableBy commentableBy = CommentableBy.ALL;
 
 
 }
