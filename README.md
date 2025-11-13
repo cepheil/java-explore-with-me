@@ -105,3 +105,5 @@ DELETE /admin/comments/{commentId}
 | `CommentController` | REST-контроллер, объединяющий public, private и admin-эндпоинты |
 
 ---
+
+https://github.com/cepheil/java-explore-with-me/pull/3
