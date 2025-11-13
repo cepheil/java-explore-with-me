@@ -130,14 +130,9 @@ public class CommentServiceImpl implements CommentService {
             log.warn("Attempt to comment unpublished event: {}", eventId);
             throw new ConflictException("Event must be published to allow comments");
         }
-        if (event.getCommentableBy() == CommentableBy.PARTICIPANTS) {
-            boolean confirmed = requestRepository
-                    .existsByEventIdAndRequesterIdAndStatus(eventId, userId, RequestStatus.CONFIRMED);
-            if (!confirmed) {
-                log.warn("User {} tried to comment event {} without confirmed participation", userId, eventId);
-                throw new ConflictException("Only confirmed participants can comment this event");
-            }
-        }
+
+        checkCommentPolicy(event, userId);
+
         Comment entity = CommentMapper.toEntity(event, author, dto);
         Comment saved = commentRepository.save(entity);
 
@@ -203,6 +198,22 @@ public class CommentServiceImpl implements CommentService {
 
         commentRepository.deleteById(commentId);
         log.info("Admin deleted comment {}", commentId);
+
+    }
+
+
+    private void checkCommentPolicy(Event event, Long userId) {
+        CommentableBy policy = event.getCommentableBy();
+        if (policy == null || policy == CommentableBy.ALL) {
+            return;
+        }
+        boolean confirmed = requestRepository
+                .existsByEventIdAndRequesterIdAndStatus(event.getId(), userId, RequestStatus.CONFIRMED);
+        if (!confirmed) {
+            log.warn("User {} tried to comment event {} without confirmed participation", userId, event.getId());
+            throw new ConflictException("Only confirmed participants can comment this event");
+        }
+
 
     }
 

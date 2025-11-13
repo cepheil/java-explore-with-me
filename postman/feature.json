@@ -1,0 +1,1844 @@
+{
+	"info": {
+		"_postman_id": "60fa4f41-6597-403a-a812-d35a4fae6a56",
+		"name": "Test EWM comments",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "46127362",
+		"_collection_link": "https://sergei-538641.postman.co/workspace/Sergei's-Workspace~dda32b85-fc21-440b-8c4c-2bd6d331d169/collection/46127362-60fa4f41-6597-403a-a812-d35a4fae6a56?action=share&source=collection_link&creator=46127362"
+	},
+	"item": [
+		{
+			"name": "setup",
+			"item": [
+				{
+					"name": "Init: create users/category/events",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {\r",
+									"  const api = new API(pm); \r",
+									"  const rnd = new RandomUtils();\r",
+									"\r",
+									"  // users\r",
+									"  const userA = await api.addUser(rnd.getUser());\r",
+									"  const userB = await api.addUser(rnd.getUser());\r",
+									"  pm.collectionVariables.set('userAId', userA.id);\r",
+									"  pm.collectionVariables.set('userBId', userB.id);\r",
+									"\r",
+									"  // category\r",
+									"  const cat = await api.addCategory(rnd.getCategory());\r",
+									"  pm.collectionVariables.set('categoryId', cat.id);\r",
+									"\r",
+									"  // events\r",
+									"  const eDraft = await api.addEvent(userA.id, rnd.getEvent(cat.id));\r",
+									"  pm.collectionVariables.set('eventDraftId', eDraft.id);\r",
+									"\r",
+									"  const ePub = await api.addEvent(userA.id, rnd.getEvent(cat.id));\r",
+									"  await api.publishEvent(ePub.id);\r",
+									"  pm.collectionVariables.set('eventPubId', ePub.id);\r",
+									"};\r",
+									"\r",
+									"const interval = setInterval(()=>{}, 1000);\r",
+									"setTimeout(async () => {\r",
+									"  try { await main(); } \r",
+									"  finally { clearInterval(interval); }\r",
+									"}, 50);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Variables are set', () => {\r",
+									"  pm.expect(pm.collectionVariables.get('userAId')).to.exist;\r",
+									"  pm.expect(pm.collectionVariables.get('userBId')).to.exist;\r",
+									"  pm.expect(pm.collectionVariables.get('categoryId')).to.exist;\r",
+									"  pm.expect(pm.collectionVariables.get('eventPubId')).to.exist;\r",
+									"  pm.expect(pm.collectionVariables.get('eventDraftId')).to.exist;\r",
+									"});\r",
+									"\r",
+									"pm.test('Variables are set', () => {\r",
+									"  ['userAId','userBId','categoryId','eventPubId','eventDraftId'].forEach(k => {\r",
+									"    pm.expect(pm.collectionVariables.get(k), k + ' not set').to.exist;\r",
+									"  });\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/categories?from=0&size=1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"categories"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "public",
+			"item": [
+				{
+					"name": "GET event comments — empty list",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('200 + JSON array', () => { pm.response.to.be.ok; pm.response.to.be.json; });\r",
+									"pm.test('Array empty', () => {\r",
+									"  const body = pm.response.json();\r",
+									"  pm.expect(body).to.be.an('array').that.has.length(0);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/events/{{eventPubId}}/comments?from=0&size=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"events",
+								"{{eventPubId}}",
+								"comments"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET event comments — non-empty & sorted DESC",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {\r",
+									"  const api = new API(pm);\r",
+									"  const rnd = new RandomUtils();\r",
+									"\r",
+									"  const eventId = Number(pm.collectionVariables.get('eventPubId'));\r",
+									"  const userId  = Number(pm.collectionVariables.get('userAId'));\r",
+									"\r",
+									"  // уже есть комментарии?\r",
+									"  let list = await api.getEventComments(eventId, { from: 0, size: 2 });\r",
+									"  if (!Array.isArray(list) || list.length < 2) {\r",
+									"    // добиваем до 2 шт для проверки сортировки\r",
+									"    await api.addComment(userId, eventId, rnd.getComment());\r",
+									"    await api.addComment(userId, eventId, rnd.getComment());\r",
+									"  }\r",
+									"};\r",
+									"\r",
+									"const interval = setInterval(() => {}, 1000);\r",
+									"setTimeout(async () => {\r",
+									"  try { await main(); } finally { clearInterval(interval); }\r",
+									"}, 50);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('200 + JSON array', () => { \r",
+									"  pm.response.to.be.ok; \r",
+									"  pm.response.to.be.json; \r",
+									"});\r",
+									"const arr = pm.response.json();\r",
+									"pm.test('Non-empty', () => pm.expect(arr.length).above(0));\r",
+									"if (arr.length > 1) {\r",
+									"  pm.test('created desc', () => {\r",
+									"    let ok = true;\r",
+									"    for (let i = 1; i < arr.length; i++) {\r",
+									"      if (arr[i-1].created < arr[i].created) ok = false;\r",
+									"    }\r",
+									"    pm.expect(ok).to.be.true;\r",
+									"  });\r",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/events/{{eventPubId}}/comments?from=0&size=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"events",
+								"{{eventPubId}}",
+								"comments"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET event comments — filter by author",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {\r",
+									"  const api = new API(pm);\r",
+									"  const rnd = new RandomUtils();\r",
+									"\r",
+									"  const eventId = Number(pm.collectionVariables.get('eventPubId'));\r",
+									"  const userId  = Number(pm.collectionVariables.get('userAId'));\r",
+									"\r",
+									"  // запросим текущие комментарии события (без фильтра по authorId)\r",
+									"  let list = await api.getEventComments(eventId, { from: 0, size: 10 });\r",
+									"\r",
+									"  // сколько из них написаны userA?\r",
+									"  const countByUserA = Array.isArray(list)\r",
+									"    ? list.filter(c => c.authorId === userId).length\r",
+									"    : 0;\r",
+									"\r",
+									"  // если меньше 2 — добьём до 2\r",
+									"  for (let i = countByUserA; i < 2; i++) {\r",
+									"    await api.addComment(userId, eventId, rnd.getComment());\r",
+									"  }\r",
+									"};\r",
+									"\r",
+									"const interval = setInterval(() => {}, 1000);\r",
+									"setTimeout(async () => {\r",
+									"  try { await main(); } finally { clearInterval(interval); }\r",
+									"}, 50);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('200 OK', () => {\r",
+									"  pm.response.to.be.ok;\r",
+									"  pm.response.to.be.json;\r",
+									"});\r",
+									"\r",
+									"const arr = pm.response.json();\r",
+									"const userA = Number(pm.collectionVariables.get('userAId'));\r",
+									"\r",
+									"pm.test('Non-empty array', () => {\r",
+									"  pm.expect(arr).to.be.an('array');\r",
+									"  pm.expect(arr.length).to.be.above(0);\r",
+									"});\r",
+									"\r",
+									"pm.test('All comments belong to userA', () => {\r",
+									"  const allByUserA = arr.every(c => c.authorId === userA);\r",
+									"  pm.expect(allByUserA, 'every comment should have authorId = userAId').to.be.true;\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/events/{{eventPubId}}/comments?from=0&size=10&authorId={{userAId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"events",
+								"{{eventPubId}}",
+								"comments"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								},
+								{
+									"key": "authorId",
+									"value": "{{userAId}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET event comments — filter by date range",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {\r",
+									"  const api = new API(pm);\r",
+									"  const rnd = new RandomUtils();\r",
+									"  const moment = require('moment');\r",
+									"\r",
+									"  const eventId = Number(pm.collectionVariables.get('eventPubId'));\r",
+									"  const userId  = Number(pm.collectionVariables.get('userAId'));\r",
+									"\r",
+									"  // 1. создаём свежий комментарий\r",
+									"  const comment = await api.addComment(userId, eventId, rnd.getComment());\r",
+									"\r",
+									"  // 2. строим диапазон вокруг его created\r",
+									"  const created = moment(comment.created, 'YYYY-MM-DD HH:mm:ss');\r",
+									"\r",
+									"  const start = created.clone().subtract(1, 'minute').format('YYYY-MM-DD HH:mm:ss');\r",
+									"  const end   = created.clone().add(1, 'minute').format('YYYY-MM-DD HH:mm:ss');\r",
+									"\r",
+									"  const rangeStart = String(start).trim();\r",
+									"  const rangeEnd   = String(end).trim();\r",
+									"\r",
+									"  pm.collectionVariables.set('rangeStart', rangeStart);\r",
+									"  pm.collectionVariables.set('rangeEnd',   rangeEnd);\r",
+									"\r",
+									"  // 3. собираем final URL с query-параметрами\r",
+									"  const baseUrl = pm.collectionVariables.get('baseUrl') || 'http://localhost:8080';\r",
+									"  const fullUrl = `${baseUrl}/events/${eventId}/comments`\r",
+									"    + `?from=0&size=10`\r",
+									"    + `&rangeStart=${encodeURIComponent(rangeStart)}`\r",
+									"    + `&rangeEnd=${encodeURIComponent(rangeEnd)}`;\r",
+									"\r",
+									"  pm.request.url = fullUrl;\r",
+									"\r",
+									"  console.log('Range params:', { rangeStart, rangeEnd });\r",
+									"  console.log('Final URL:', fullUrl);\r",
+									"};\r",
+									"\r",
+									"const interval = setInterval(() => {}, 1000);\r",
+									"setTimeout(async () => {\r",
+									"  try { await main(); } finally { clearInterval(interval); }\r",
+									"}, 50);\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('200 OK + JSON', () => {\r",
+									"  pm.response.to.be.ok;\r",
+									"  pm.response.to.be.json;\r",
+									"});\r",
+									"\r",
+									"const arr = pm.response.json();\r",
+									"pm.test('Non-empty array', () => {\r",
+									"  pm.expect(arr).to.be.an('array');\r",
+									"  pm.expect(arr.length).to.be.above(0);\r",
+									"});\r",
+									"\r",
+									"const moment = require('moment');\r",
+									"const rangeStart = pm.collectionVariables.get('rangeStart');\r",
+									"const rangeEnd   = pm.collectionVariables.get('rangeEnd');\r",
+									"\r",
+									"pm.test('All comments within [rangeStart, rangeEnd]', () => {\r",
+									"  const start = moment(rangeStart, 'YYYY-MM-DD HH:mm:ss');\r",
+									"  const end   = moment(rangeEnd,   'YYYY-MM-DD HH:mm:ss');\r",
+									"\r",
+									"  const allInRange = arr.every(c => {\r",
+									"    const created = moment(c.created, 'YYYY-MM-DD HH:mm:ss');\r",
+									"    return created.isSameOrAfter(start) && created.isSameOrBefore(end);\r",
+									"  });\r",
+									"\r",
+									"  pm.expect(allInRange, 'each comment.created must be within range').to.be.true;\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/events/{{eventPubId}}/comments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"events",
+								"{{eventPubId}}",
+								"comments"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET event comments — bad range (start > end)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('400 Bad Request', () => {\r",
+									"  pm.response.to.be.badRequest;\r",
+									"});\r",
+									"\r",
+									"pm.test('Error body has status BAD_REQUEST', () => {\r",
+									"  const body = pm.response.json();\r",
+									"  pm.expect(body).to.have.property('status');\r",
+									"  pm.expect(body.status).to.eql('BAD_REQUEST');\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/events/{{eventPubId}}/comments?from=0&size=10&rangeStart=2035-01-01 00:00:00&rangeEnd=2020-01-01 00:00:00",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"events",
+								"{{eventPubId}}",
+								"comments"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								},
+								{
+									"key": "rangeStart",
+									"value": "2035-01-01 00:00:00"
+								},
+								{
+									"key": "rangeEnd",
+									"value": "2020-01-01 00:00:00"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET event comments — draft event (404)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('404 Not Found', () => {\r",
+									"  pm.response.to.be.notFound;\r",
+									"});\r",
+									"\r",
+									"pm.test('Error body has status NOT_FOUND', () => {\r",
+									"  const body = pm.response.json();\r",
+									"  pm.expect(body).to.have.property('status');\r",
+									"  pm.expect(body.status).to.eql('NOT_FOUND');\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/events/{{eventDraftId}}/comments?from=0&size=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"events",
+								"{{eventDraftId}}",
+								"comments"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "user",
+			"item": [
+				{
+					"name": "GET my comments (non-empty & sorted DESC)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {\r",
+									"  const api = new API(pm);\r",
+									"  const rnd = new RandomUtils();\r",
+									"\r",
+									"  const userId  = Number(pm.collectionVariables.get('userAId'));\r",
+									"  const eventId = Number(pm.collectionVariables.get('eventPubId'));\r",
+									"\r",
+									"  // текущие комменты\r",
+									"  let list = await api.getUserComments(userId, { from: 0, size: 10 });\r",
+									"  const count = Array.isArray(list) ? list.length : 0;\r",
+									"\r",
+									"  for (let i = count; i < 2; i++) {\r",
+									"    await api.addComment(userId, eventId, rnd.getComment());\r",
+									"  }\r",
+									"};\r",
+									"\r",
+									"const interval = setInterval(()=>{}, 1000);\r",
+									"setTimeout(async () => {\r",
+									"  try { await main(); } finally { clearInterval(interval); }\r",
+									"}, 50);\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('200 OK + JSON', () => {\r",
+									"  pm.response.to.be.ok;\r",
+									"  pm.response.to.be.json;\r",
+									"});\r",
+									"\r",
+									"const arr = pm.response.json();\r",
+									"\r",
+									"pm.test('Non-empty array', () => {\r",
+									"  pm.expect(arr).to.be.an('array');\r",
+									"  pm.expect(arr.length).to.be.above(0);\r",
+									"});\r",
+									"\r",
+									"pm.test('All belong to userA', () => {\r",
+									"  const userA = Number(pm.collectionVariables.get('userAId'));\r",
+									"  const allOwn = arr.every(c => c.authorId === userA);\r",
+									"  pm.expect(allOwn, 'all comments must belong to userA').to.be.true;\r",
+									"});\r",
+									"\r",
+									"pm.test('Sorted by created DESC', () => {\r",
+									"  if (arr.length < 2) return;\r",
+									"  let ok = true;\r",
+									"  for (let i = 1; i < arr.length; i++) {\r",
+									"    if (arr[i-1].created < arr[i].created) ok = false;\r",
+									"  }\r",
+									"  pm.expect(ok).to.be.true;\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userAId}}/comments?from=0&size=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userAId}}",
+								"comments"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET my comments — bad pagination",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('400 Bad Request', () => {\r",
+									"  pm.response.to.be.badRequest;\r",
+									"});\r",
+									"\r",
+									"pm.test('Error body has status BAD_REQUEST', () => {\r",
+									"  const body = pm.response.json();\r",
+									"  pm.expect(body).to.have.property('status');\r",
+									"  pm.expect(body.status).to.eql('BAD_REQUEST');\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userAId}}/comments?from=-1&size=0",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userAId}}",
+								"comments"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "-1"
+								},
+								{
+									"key": "size",
+									"value": "0"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST create comment (userA, published event)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();\r",
+									"const body = { text: rnd.getComment() };\r",
+									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('201 Created', () => pm.response.to.have.status(201));\r",
+									"\r",
+									"const body = pm.response.json();\r",
+									"pm.test('Response has fields', () => {\r",
+									"  ['id', 'eventId', 'authorId', 'text', 'created'].forEach(f => pm.expect(body).to.have.property(f));\r",
+									"});\r",
+									"\r",
+									"pm.collectionVariables.set('userCommentId', body.id);\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userAId}}/events/{{eventPubId}}/comments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userAId}}",
+								"events",
+								"{{eventPubId}}",
+								"comments"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST create comment — blank text",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify({ text: \"   \" }) });"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('400 Bad Request', () => {\r",
+									"  pm.response.to.be.badRequest;\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userAId}}/events/{{eventPubId}}/comments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userAId}}",
+								"events",
+								"{{eventPubId}}",
+								"comments"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST create comment — too short",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();\r",
+									"const body = { text: rnd.getShortComment() }; // \"ok\"\r",
+									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('400 Bad Request (too short)', () => {\r",
+									"  pm.response.to.be.badRequest;\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userAId}}/events/{{eventPubId}}/comments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userAId}}",
+								"events",
+								"{{eventPubId}}",
+								"comments"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST create comment — too long",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();\r",
+									"const body = { text: rnd.getTooLongComment(2001) };\r",
+									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('400 Bad Request (too long)', () => {\r",
+									"  pm.response.to.be.badRequest;\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userAId}}/events/{{eventPubId}}/comments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userAId}}",
+								"events",
+								"{{eventPubId}}",
+								"comments"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST create comment — draft event (409)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const rnd = new RandomUtils();\r",
+									"const body = { text: rnd.getComment() };\r",
+									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('409 Conflict', () => {\r",
+									"  pm.response.to.have.status(409);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userAId}}/events/{{eventDraftId}}/comments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userAId}}",
+								"events",
+								"{{eventDraftId}}",
+								"comments"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PATCH update own comment (success)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const body = { text: \"Обновленный текст комментария\" };\r",
+									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('200 OK', () => {\r",
+									"  pm.response.to.be.ok;\r",
+									"  pm.response.to.be.json;\r",
+									"});\r",
+									"\r",
+									"const body = pm.response.json();\r",
+									"pm.test('Text updated', () => {\r",
+									"  pm.expect(body.text).to.eql(\"Обновленный текст комментария\");\r",
+									"});\r",
+									"\r",
+									"pm.test('Updated timestamp set', () => {\r",
+									"  pm.expect(body.updated).to.exist;\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userAId}}/comments/{{userCommentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userAId}}",
+								"comments",
+								"{{userCommentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PATCH update own comment — same text (no-op)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const body = { text: \"Обновленный текст комментария\" };\r",
+									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('200 OK', () => {\r",
+									"  pm.response.to.be.ok;\r",
+									"  pm.response.to.be.json;\r",
+									"});\r",
+									"\r",
+									"const body = pm.response.json();\r",
+									"pm.test('Text unchanged', () => {\r",
+									"  pm.expect(body.text).to.eql(\"Обновленный текст комментария\");\r",
+									"});\r",
+									"\r",
+									" \r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userAId}}/comments/{{userCommentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userAId}}",
+								"comments",
+								"{{userCommentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PATCH update foreign comment — 404",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify({ text: \"Попытка изменить чужой комментарий\" }) });"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('404 Not Found', () => {\r",
+									"  pm.response.to.be.notFound;\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userBId}}/comments/{{userCommentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userBId}}",
+								"comments",
+								"{{userCommentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE own comment (204)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('204 No Content', () => {\r",
+									"  pm.response.to.have.status(204);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userAId}}/comments/{{userCommentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userAId}}",
+								"comments",
+								"{{userCommentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE own comment twice — 404",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('404 Not Found after second delete', () => {\r",
+									"  pm.response.to.be.notFound;\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"packages": {},
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userAId}}/comments/{{userCommentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userAId}}",
+								"comments",
+								"{{userCommentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST comment — PARTICIPANTS + confirmed request (201)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {\r",
+									"  const api = new API(pm);\r",
+									"  const rnd = new RandomUtils();\r",
+									"\r",
+									"  // 1. создаём инициатора и участника\r",
+									"  const initiator = await api.addUser(rnd.getUser());\r",
+									"  const participant = await api.addUser(rnd.getUser());\r",
+									"  pm.collectionVariables.set('policyInitiatorId', initiator.id);\r",
+									"  pm.collectionVariables.set('policyUserId', participant.id);\r",
+									"\r",
+									"  // 2. категория\r",
+									"  const cat = await api.addCategory(rnd.getCategory());\r",
+									"  pm.collectionVariables.set('policyCategoryId', cat.id);\r",
+									"\r",
+									"  // 3. событие с commentableBy = PARTICIPANTS\r",
+									"  const eventBody = rnd.getEvent(cat.id);\r",
+									"  eventBody.commentableBy = \"PARTICIPANTS\";\r",
+									" \r",
+									"  // eventBody.requestModeration = true;\r",
+									"  const event = await api.addEvent(initiator.id, eventBody);\r",
+									"  pm.collectionVariables.set('policyEventId', event.id);\r",
+									"\r",
+									"  // 4. публикуем событие\r",
+									"  await api.publishEvent(event.id);\r",
+									"\r",
+									"  // 5. создаём заявку участника\r",
+									"  const req = await api.publishParticipationRequest(event.id, participant.id);\r",
+									"\r",
+									"  // 6. подтверждаем заявку, ТОЛЬКО если она ещё PENDING\r",
+									"  if (req.status === 'PENDING') {\r",
+									"    await api.acceptParticipationRequest(event.id, initiator.id, req.id);\r",
+									"  }\r",
+									"\r",
+									"  // 7. готовим URL и тело комментария\r",
+									"  const baseUrl = pm.collectionVariables.get('baseUrl') || 'http://localhost:8080';\r",
+									"  const fullUrl = `${baseUrl}/users/${participant.id}/events/${event.id}/comments`;\r",
+									"  pm.request.url = fullUrl;\r",
+									"\r",
+									"  const body = { text: rnd.getComment() };\r",
+									"  pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });\r",
+									"};\r",
+									"\r",
+									"const interval = setInterval(() => {}, 1000);\r",
+									"setTimeout(async () => {\r",
+									"  try { await main(); } finally { clearInterval(interval); }\r",
+									"}, 50);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('201 Created', () => {\r",
+									"  pm.response.to.have.status(201);\r",
+									"});\r",
+									"\r",
+									"const body = pm.response.json();\r",
+									"pm.test('Comment created for PARTICIPANTS event', () => {\r",
+									"  pm.expect(body).to.have.property('id');\r",
+									"  pm.expect(body).to.have.property('eventId');\r",
+									"  pm.expect(body).to.have.property('authorId');\r",
+									"  pm.expect(body.text).to.be.a('string').and.not.empty;\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{policyUserId}}/events/{{policyEventId}}/comments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{policyUserId}}",
+								"events",
+								"{{policyEventId}}",
+								"comments"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST comment — PARTICIPANTS without confirmed request (409)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {\r",
+									"  const api = new API(pm);\r",
+									"  const rnd = new RandomUtils();\r",
+									"\r",
+									"  // 1. инициатор и пользователь без заявки\r",
+									"  const initiator = await api.addUser(rnd.getUser());\r",
+									"  const stranger  = await api.addUser(rnd.getUser());\r",
+									"\r",
+									"  // 2. категория\r",
+									"  const cat = await api.addCategory(rnd.getCategory());\r",
+									"\r",
+									"  // 3. событие с commentableBy = PARTICIPANTS\r",
+									"  const eventBody = rnd.getEvent(cat.id);\r",
+									"  eventBody.commentableBy = \"PARTICIPANTS\";\r",
+									"  const event = await api.addEvent(initiator.id, eventBody);\r",
+									"\r",
+									"  // 4. публикуем событие\r",
+									"  await api.publishEvent(event.id);\r",
+									"\r",
+									"  // 5. НИКАКИХ заявок/подтверждений не создаём\r",
+									"\r",
+									"  // 6. URL и тело запроса\r",
+									"  const baseUrl = pm.collectionVariables.get('baseUrl') || 'http://localhost:8080';\r",
+									"  const fullUrl = `${baseUrl}/users/${stranger.id}/events/${event.id}/comments`;\r",
+									"  pm.request.url = fullUrl;\r",
+									"\r",
+									"  const body = { text: rnd.getComment() };\r",
+									"  pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });\r",
+									"};\r",
+									"\r",
+									"const interval = setInterval(() => {}, 1000);\r",
+									"setTimeout(async () => {\r",
+									"  try { await main(); } finally { clearInterval(interval); }\r",
+									"}, 50);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('409 Conflict for PARTICIPANTS without confirmed request', () => {\r",
+									"  pm.response.to.have.status(409);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{policyUserId}}/events/{{policyEventId}}/comments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{policyUserId}}",
+								"events",
+								"{{policyEventId}}",
+								"comments"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "admin",
+			"item": [
+				{
+					"name": "DELETE comment by admin — 204",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const main = async () => {\r",
+									"  const api = new API(pm);\r",
+									"  const rnd = new RandomUtils();\r",
+									"\r",
+									"  // создаём юзера, категорию, событие и коммент\r",
+									"  const user = await api.addUser(rnd.getUser());\r",
+									"  const cat  = await api.addCategory(rnd.getCategory());\r",
+									"\r",
+									"  const event = await api.addEvent(user.id, rnd.getEvent(cat.id));\r",
+									"  await api.publishEvent(event.id);\r",
+									"\r",
+									"  const comment = await api.addComment(user.id, event.id, rnd.getComment());\r",
+									"\r",
+									"  pm.variables.set('adminCommentId', comment.id);\r",
+									"  pm.collectionVariables.set('adminCommentId', comment.id);\r",
+									"\r",
+									"  const baseUrl = pm.collectionVariables.get('baseUrl') || 'http://localhost:8080';\r",
+									"  pm.request.url = `${baseUrl}/admin/comments/${comment.id}`;\r",
+									"};\r",
+									"\r",
+									"const interval = setInterval(() => {}, 1000);\r",
+									"setTimeout(async () => {\r",
+									"  try { await main(); } finally { clearInterval(interval); }\r",
+									"}, 50);\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('204 No Content (admin deleted comment)', () => {\r",
+									"  pm.response.to.have.status(204);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/admin/comments/{{adminCommentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"comments",
+								"{{adminCommentId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE comment by admin — not found (404)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('404 Not Found for non-existing comment', () => {\r",
+									"  pm.response.to.be.notFound;\r",
+									"});\r",
+									"\r",
+									"pm.test('Error body has status NOT_FOUND', () => {\r",
+									"  const body = pm.response.json();\r",
+									"  pm.expect(body).to.have.property('status');\r",
+									"  pm.expect(body.status).to.eql('NOT_FOUND');\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/admin/comments/999999999",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"comments",
+								"999999999"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					"API = class {\r",
+					"    constructor(postman, verbose = false, baseUrl = \"http://localhost:8080\") {\r",
+					"        this.baseUrl = baseUrl;\r",
+					"        this.pm = postman;\r",
+					"        this._verbose = verbose;\r",
+					"    }\r",
+					"\r",
+					"    async addUser(user, verbose=null) {\r",
+					"        return this.post(\"/admin/users\", user, \"Ошибка при добавлении нового пользователя: \", verbose);\r",
+					"    }\r",
+					"\r",
+					"    async addCategory(category, verbose=null) {\r",
+					"        return this.post(\"/admin/categories\", category, \"Ошибка при добавлении новой категории: \", verbose);\r",
+					"    }\r",
+					"\r",
+					"    async addEvent(userId, event, verbose=null) {\r",
+					"        return this.post(\"/users/\" + userId + \"/events\", event, \"Ошибка при добавлении нового события: \", verbose);\r",
+					"    }\r",
+					"\r",
+					"    async addCompilation(compilation, verbose=null) {\r",
+					"        return this.post(\"/admin/compilations\", compilation, \"Ошибка при добавлении новой подборки: \", verbose);\r",
+					"    }\r",
+					"\r",
+					"    async publishParticipationRequest(eventId, userId, verbose=null) {\r",
+					"        return this.post('/users/' + userId + '/requests?eventId=' + eventId, null, \"Ошибка при добавлении нового запроса на участие в событии\", verbose);\r",
+					"    }\r",
+					"\r",
+					"    async publishEvent(eventId, verbose=null) {\r",
+					"        return this.patch('/admin/events/' + eventId, {stateAction: \"PUBLISH_EVENT\"}, \"Ошибка при публикации события\", verbose);\r",
+					"    }\r",
+					"    \r",
+					"    async rejectEvent(eventId, verbose=null) {\r",
+					"        return this.patch('/admin/events/' + eventId, {stateAction: \"REJECT_EVENT\"}, \"Ошибка при отмене события\", verbose);\r",
+					"    }\r",
+					"\r",
+					"    async acceptParticipationRequest(eventId, userId, reqId, verbose=null) {\r",
+					"        return this.patch('/users/' + userId + '/events/' + eventId + '/requests', {requestIds:[reqId], status: \"CONFIRMED\"}, \"Ошибка при принятии заявки на участие в событии\", verbose);\r",
+					"    }\r",
+					"\r",
+					"    async findCategory(catId, verbose=null) {\r",
+					"        return this.get('/categories/' + catId, null, \"Ошибка при поиске категории по id\", verbose);\r",
+					"    }\r",
+					"\r",
+					"    async findCompilation(compId, verbose=null) {\r",
+					"        return this.get('/compilations/' + compId, null, \"Ошибка при поиске подборки по id\", verbose);\r",
+					"    }\r",
+					"\r",
+					"    async findEvent(eventId, verbose=null) {\r",
+					"        return this.get('/events/' + eventId, null, \"Ошибка при поиске события по id\", verbose);\r",
+					"    }\r",
+					"\r",
+					"    async findUser(userId, verbose=null) {\r",
+					"        return this.get('/admin/users?ids=' + userId, null, \"Ошибка при поиске пользователя по id\", verbose);\r",
+					"    }\r",
+					"\r",
+					"   /* -------------------- КОММЕНТАРИИ: CRUD + списки -------------------- */\r",
+					"    // Создать комментарий\r",
+					"    async addComment(userId, eventId, text, verbose=null) {\r",
+					"        const body = { text };\r",
+					"        return this.post(`/users/${userId}/events/${eventId}/comments`, body, \"Ошибка при создании комментария: \", verbose);\r",
+					"    }\r",
+					"\r",
+					"    // Обновить свой комментарий\r",
+					"    async updateComment(userId, commentId, text, verbose=null) {\r",
+					"        const body = { text };\r",
+					"        return this.patch(`/users/${userId}/comments/${commentId}`, body, \"Ошибка при обновлении комментария: \", verbose);\r",
+					"    }\r",
+					"\r",
+					"    // Удалить свой комментарий\r",
+					"    async deleteOwnComment(userId, commentId, verbose=null) {\r",
+					"        return this.sendRequest(\"DELETE\", `/users/${userId}/comments/${commentId}`, null, \"Ошибка при удалении комментария пользователем: \", verbose);\r",
+					"    }\r",
+					"\r",
+					"    // Удалить любой комментарий (админ)\r",
+					"    async deleteCommentByAdmin(commentId, verbose=null) {\r",
+					"        return this.sendRequest(\"DELETE\", `/admin/comments/${commentId}`, null, \"Ошибка при удалении комментария администратором: \", verbose);\r",
+					"    }\r",
+					"\r",
+					"    // Публичный список по событию с фильтрами\r",
+					"    async getEventComments(eventId, {from=0, size=10, authorId=null, rangeStart=null, rangeEnd=null} = {}, verbose=null) {\r",
+					"        const q = new URLSearchParams();\r",
+					"        q.set(\"from\", from); q.set(\"size\", size);\r",
+					"        if (authorId != null)   q.set(\"authorId\", authorId);\r",
+					"        if (rangeStart != null) q.set(\"rangeStart\", rangeStart);\r",
+					"        if (rangeEnd != null)   q.set(\"rangeEnd\", rangeEnd);\r",
+					"        return this.get(`/events/${eventId}/comments?` + q.toString(), null, \"Ошибка при получении комментариев события: \", verbose);\r",
+					"    }\r",
+					"\r",
+					"    // Список своих комментариев с фильтрами\r",
+					"    async getUserComments(userId, {from=0, size=10, rangeStart=null, rangeEnd=null} = {}, verbose=null) {\r",
+					"        const q = new URLSearchParams();\r",
+					"        q.set(\"from\", from); q.set(\"size\", size);\r",
+					"        if (rangeStart != null) q.set(\"rangeStart\", rangeStart);\r",
+					"        if (rangeEnd != null)   q.set(\"rangeEnd\", rangeEnd);\r",
+					"        return this.get(`/users/${userId}/comments?` + q.toString(), null, \"Ошибка при получении комментариев пользователя: \", verbose);\r",
+					"    }\r",
+					"\r",
+					" \r",
+					"\r",
+					"    async post(path, body, errorText = \"Ошибка при выполнении post-запроса: \", verbose=null) {\r",
+					"        return this.sendRequest(\"POST\", path, body, errorText, verbose);\r",
+					"    }\r",
+					"\r",
+					"    async patch(path, body = null, errorText = \"Ошибка при выполнении patch-запроса: \", verbose=null) {\r",
+					"        return this.sendRequest(\"PATCH\", path, body, errorText, verbose);\r",
+					"    }\r",
+					"\r",
+					"    async get(path, body = null, errorText = \"Ошибка при выполнении get-запроса: \", verbose=null) {\r",
+					"        return this.sendRequest(\"GET\", path, body, errorText, verbose);\r",
+					"    }\r",
+					"    \r",
+					"    async sendRequest(method, path, body=null, errorText = \"Ошибка при выполнении запроса: \", verbose=null) {\r",
+					"        return new Promise((resolve, reject) => {\r",
+					"            verbose = verbose == null ? this._verbose : verbose;\r",
+					"            const request = {\r",
+					"                url: this.baseUrl + path,\r",
+					"                method: method,\r",
+					"                body: body == null ? \"\" : JSON.stringify(body),\r",
+					"                header: { \"Content-Type\": \"application/json\" },\r",
+					"            };\r",
+					"            if(verbose) {\r",
+					"                console.log(\"Отправляю запрос: \", request);\r",
+					"            }\r",
+					"\r",
+					"            try {\r",
+					"                this.pm.sendRequest(request, (error, response) => {\r",
+					"                    if(error || (response.code >= 400 && response.code <= 599)) {\r",
+					"                        let err = error ? error : JSON.stringify(response.json());\r",
+					"                        console.error(\"При выполнении запроса к серверу возникла ошика.\\n\", err,\r",
+					"                             \"\\nДля отладки проблемы повторите такой же запрос к вашей программе \" + \r",
+					"                             \"на локальном компьютере. Данные запроса:\\n\", JSON.stringify(request));\r",
+					"\r",
+					"                        reject(new Error(errorText + err));\r",
+					"                    }\r",
+					"                    try {\r",
+					"                        if (response.stream && response.stream.length > 0) {\r",
+					"                            return resolve(response.json());\r",
+					"                        }\r",
+					"                        // если тела нет — вернём сам response\r",
+					"                        return resolve(response);\r",
+					"                    } catch(e) {\r",
+					"                        // если json не парсится — вернём текст\r",
+					"                        return resolve(response.text());\r",
+					"                    }\r",
+					"                });\r",
+					"                \r",
+					"            } catch(err) {\r",
+					"                if(verbose) {\r",
+					"                    console.error(errorText, err);\r",
+					"                }\r",
+					"                return Promise.reject(err);\r",
+					"            }\r",
+					"        });\r",
+					"    }\r",
+					"};\r",
+					"\r",
+					"RandomUtils = class {\r",
+					"    constructor() {}\r",
+					"\r",
+					"    getUser() {\r",
+					"        return {\r",
+					"            name: pm.variables.replaceIn('{{$randomFullName}}'),\r",
+					"            email: pm.variables.replaceIn('{{$randomEmail}}')\r",
+					"        };\r",
+					"    }\r",
+					"\r",
+					"    getCategory() {\r",
+					"        return {\r",
+					"            name: pm.variables.replaceIn('{{$randomWord}}') + Math.floor(Math.random() * 10000 * Math.random()).toString()\r",
+					"        };\r",
+					"    }\r",
+					"\r",
+					"    getEvent(categoryId) {\r",
+					"        return {\r",
+					"            annotation: pm.variables.replaceIn('{{$randomLoremParagraph}}'),\r",
+					"            category: categoryId,\r",
+					"            description: pm.variables.replaceIn('{{$randomLoremParagraphs}}'),\r",
+					"            eventDate: this.getFutureDateTime(),\r",
+					"            location: {\r",
+					"                lat: parseFloat(pm.variables.replaceIn('{{$randomLatitude}}')),\r",
+					"                lon: parseFloat(pm.variables.replaceIn('{{$randomLongitude}}')),\r",
+					"            },\r",
+					"            paid: pm.variables.replaceIn('{{$randomBoolean}}'),\r",
+					"            participantLimit: pm.variables.replaceIn('{{$randomInt}}'),\r",
+					"            requestModeration: pm.variables.replaceIn('{{$randomBoolean}}'),\r",
+					"            title: pm.variables.replaceIn('{{$randomLoremSentence}}'),\r",
+					"        }\r",
+					"    }\r",
+					"\r",
+					"    getCompilation(...eventIds) {\r",
+					"        return {\r",
+					"            title: pm.variables.replaceIn('{{$randomLoremSentence}}').slice(0, 50),\r",
+					"            pinned: pm.variables.replaceIn('{{$randomBoolean}}'),\r",
+					"            events: eventIds\r",
+					"        };\r",
+					"    }\r",
+					"\r",
+					"     \r",
+					"    //  \r",
+					"    getComment(minLen = 12, maxLen = 60) {\r",
+					"        const base = pm.variables.replaceIn('{{$randomLoremSentence}}');\r",
+					"        let text = base.replace(/\\s+/g, ' ').trim();\r",
+					"        if (text.length < minLen) {\r",
+					"            // добираем слово\r",
+					"            text += ' ' + pm.variables.replaceIn('{{$randomWord}}');\r",
+					"        }\r",
+					"        return text.slice(0, Math.max(minLen, Math.min(maxLen, 2000)));\r",
+					"    }\r",
+					"\r",
+					"    // 400 \r",
+					"    getShortComment() {\r",
+					"        return \"ok\"; // @Size(min=3)\r",
+					"    }\r",
+					"\r",
+					"     \r",
+					"    getTooLongComment(len = 2001) {  //@Size(max=2000)\r",
+					"        return 'X'.repeat(len); \r",
+					"    }\r",
+					"\r",
+					"     \r",
+					"    getRange(hoursBack = 1, hoursForward = 1) {\r",
+					"        const moment = require('moment');\r",
+					"        const start = moment().subtract(hoursBack, 'hour').format('YYYY-MM-DD HH:mm:ss');\r",
+					"        const end   = moment().add(hoursForward, 'hour').format('YYYY-MM-DD HH:mm:ss');\r",
+					"        return { start, end };\r",
+					"    }\r",
+					"\r",
+					"\r",
+					"    getFutureDateTime(hourShift = 5, minuteShift=0, yearShift=0) {\r",
+					"        let moment = require('moment');\r",
+					"\r",
+					"        let m = moment();\r",
+					"        m.add(hourShift, 'hour');\r",
+					"        m.add(minuteShift, 'minute');\r",
+					"        m.add(yearShift, 'year');\r",
+					"\r",
+					"        return m.format('YYYY-MM-DD HH:mm:ss');\r",
+					"    }\r",
+					"\r",
+					"    getWord(length = 1) {\r",
+					"        let result = '';\r",
+					"        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';\r",
+					"        const charactersLength = characters.length;\r",
+					"        let counter = 0;\r",
+					"        while (counter < length) {\r",
+					"            result += characters.charAt(Math.floor(Math.random() * charactersLength));\r",
+					"            counter += 1;\r",
+					"        }\r",
+					"        return result;\r",
+					"    }\r",
+					"}\r",
+					"\r",
+					"pm.request.headers.upsert({\r",
+					"    key: 'Content-Type',\r",
+					"    value: 'application/json'\r",
+					"});"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": ""
+		},
+		{
+			"key": "userAId",
+			"value": ""
+		},
+		{
+			"key": "userBId",
+			"value": ""
+		},
+		{
+			"key": "categoryId",
+			"value": ""
+		},
+		{
+			"key": "eventPubId",
+			"value": ""
+		},
+		{
+			"key": "eventDraftId",
+			"value": ""
+		},
+		{
+			"key": "commentId",
+			"value": ""
+		},
+		{
+			"key": "rangeStart",
+			"value": ""
+		},
+		{
+			"key": "rangeEnd",
+			"value": ""
+		},
+		{
+			"key": "userCommentId",
+			"value": ""
+		},
+		{
+			"key": "policyInitiatorId",
+			"value": ""
+		},
+		{
+			"key": "policyUserId",
+			"value": ""
+		},
+		{
+			"key": "policyCategoryId",
+			"value": ""
+		},
+		{
+			"key": "policyEventId",
+			"value": ""
+		},
+		{
+			"key": "adminCommentId",
+			"value": ""
+		}
+	]
+}

@@ -18,8 +18,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
                   FROM Comment c
                  WHERE c.event.id = :eventId
                    AND (:authorId IS NULL OR c.author.id = :authorId)
-                   AND (:start    IS NULL OR c.created >= :start)
-                   AND (:end      IS NULL OR c.created <= :end)
+                   AND c.created BETWEEN :start AND :end
                  ORDER BY c.created DESC
             """)
     Page<Comment> searchEventComments(@Param("eventId") Long eventId,
@@ -33,8 +32,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
                 SELECT c
                   FROM Comment c
                  WHERE c.author.id = :authorId
-                   AND (:start IS NULL OR c.created >= :start)
-                   AND (:end   IS NULL OR c.created <= :end)
+                  AND c.created BETWEEN :start AND :end
                  ORDER BY c.created DESC
             """)
     Page<Comment> searchAuthorComments(@Param("authorId") Long authorId,
