@@ -1782,7 +1782,21 @@
 					"    key: 'Content-Type',\r",
 					"    value: 'application/json'\r",
 					"});\r",
-					""
+					"\r",
+					"// ===== ГЛОБАЛЬНАЯ НОРМАЛИЗАЦИЯ BASEURL ДЛЯ CI И ЛОКАЛЬНО =====\r",
+					"(function forceBaseUrl() {\r",
+					"    // Берём из env или коллекции\r",
+					"    let base = pm.environment.get('baseUrl') || pm.collectionVariables.get('baseUrl');\r",
+					"\r",
+					"    // Если пусто или мусор вроде \"http://\" / \"http:///\"\r",
+					"    if (!base || base === 'http://' || base === 'http:///') {\r",
+					"        base = 'http://localhost:8080';\r",
+					"    }\r",
+					"\r",
+					"    // Жестко прописываем и туда, и туда\r",
+					"    pm.environment.set('baseUrl', base);\r",
+					"    pm.collectionVariables.set('baseUrl', base);\r",
+					"})();"
 				]
 			}
 		},
