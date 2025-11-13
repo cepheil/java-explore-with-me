@@ -715,8 +715,7 @@
 								"exec": [
 									"const rnd = new RandomUtils();\r",
 									"const body = { text: rnd.getComment() };\r",
-									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });\r",
-									""
+									"pm.collectionVariables.set('commentCreateBody', JSON.stringify(body));"
 								],
 								"type": "text/javascript",
 								"packages": {},
@@ -746,6 +745,15 @@
 					"request": {
 						"method": "POST",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{{commentCreateBody}}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
 							"raw": "{{baseUrl}}/users/{{userAId}}/events/{{eventPubId}}/comments",
 							"host": [
@@ -769,7 +777,7 @@
 							"listen": "prerequest",
 							"script": {
 								"exec": [
-									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify({ text: \"   \" }) });"
+									""
 								],
 								"type": "text/javascript",
 								"packages": {},
@@ -793,6 +801,15 @@
 					"request": {
 						"method": "POST",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"text\": \"   \" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
 							"raw": "{{baseUrl}}/users/{{userAId}}/events/{{eventPubId}}/comments",
 							"host": [
@@ -816,9 +833,7 @@
 							"listen": "prerequest",
 							"script": {
 								"exec": [
-									"const rnd = new RandomUtils();\r",
-									"const body = { text: rnd.getShortComment() }; // \"ok\"\r",
-									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });"
+									" "
 								],
 								"type": "text/javascript",
 								"packages": {},
@@ -842,6 +857,15 @@
 					"request": {
 						"method": "POST",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"text\": \"ok\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
 							"raw": "{{baseUrl}}/users/{{userAId}}/events/{{eventPubId}}/comments",
 							"host": [
@@ -865,9 +889,7 @@
 							"listen": "prerequest",
 							"script": {
 								"exec": [
-									"const rnd = new RandomUtils();\r",
-									"const body = { text: rnd.getTooLongComment(2001) };\r",
-									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });"
+									""
 								],
 								"type": "text/javascript",
 								"packages": {},
@@ -891,6 +913,15 @@
 					"request": {
 						"method": "POST",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"text\": \"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\"  }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
 							"raw": "{{baseUrl}}/users/{{userAId}}/events/{{eventPubId}}/comments",
 							"host": [
@@ -914,9 +945,7 @@
 							"listen": "prerequest",
 							"script": {
 								"exec": [
-									"const rnd = new RandomUtils();\r",
-									"const body = { text: rnd.getComment() };\r",
-									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });"
+									""
 								],
 								"type": "text/javascript",
 								"packages": {},
@@ -940,6 +969,15 @@
 					"request": {
 						"method": "POST",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"text\": \"Comment for draft event\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
 							"raw": "{{baseUrl}}/users/{{userAId}}/events/{{eventDraftId}}/comments",
 							"host": [
@@ -1545,7 +1583,10 @@
 					"    }\r",
 					"\r",
 					"    async acceptParticipationRequest(eventId, userId, reqId, verbose=null) {\r",
-					"        return this.patch('/users/' + userId + '/events/' + eventId + '/requests', {requestIds:[reqId], status: \"CONFIRMED\"}, \"Ошибка при принятии заявки на участие в событии\", verbose);\r",
+					"        return this.patch('/users/' + userId + '/events/' + eventId + '/requests',\r",
+					"            {requestIds:[reqId], status: \"CONFIRMED\"},\r",
+					"            \"Ошибка при принятии заявки на участие в событии\",\r",
+					"            verbose);\r",
 					"    }\r",
 					"\r",
 					"    async findCategory(catId, verbose=null) {\r",
@@ -1564,60 +1605,66 @@
 					"        return this.get('/admin/users?ids=' + userId, null, \"Ошибка при поиске пользователя по id\", verbose);\r",
 					"    }\r",
 					"\r",
-					"    /* -------------------- КОММЕНТАРИИ -------------------- */\r",
+					"    /* --------- КОММЕНТАРИИ: методы поверх базового API --------- */\r",
 					"\r",
 					"    async addComment(userId, eventId, text, verbose=null) {\r",
 					"        const body = { text };\r",
-					"        return this.post(`/users/${userId}/events/${eventId}/comments`, body, \"Ошибка при создании комментария: \", verbose);\r",
+					"        return this.post(`/users/${userId}/events/${eventId}/comments`,\r",
+					"            body,\r",
+					"            \"Ошибка при создании комментария: \",\r",
+					"            verbose);\r",
 					"    }\r",
 					"\r",
 					"    async updateComment(userId, commentId, text, verbose=null) {\r",
 					"        const body = { text };\r",
-					"        return this.patch(`/users/${userId}/comments/${commentId}`, body, \"Ошибка при обновлении комментария: \", verbose);\r",
+					"        return this.patch(`/users/${userId}/comments/${commentId}`,\r",
+					"            body,\r",
+					"            \"Ошибка при обновлении комментария: \",\r",
+					"            verbose);\r",
 					"    }\r",
 					"\r",
 					"    async deleteOwnComment(userId, commentId, verbose=null) {\r",
-					"        return this.sendRequest(\"DELETE\", `/users/${userId}/comments/${commentId}`, null, \"Ошибка при удалении комментария пользователем: \", verbose);\r",
+					"        return this.sendRequest(\"DELETE\",\r",
+					"            `/users/${userId}/comments/${commentId}`,\r",
+					"            null,\r",
+					"            \"Ошибка при удалении комментария пользователем: \",\r",
+					"            verbose);\r",
 					"    }\r",
 					"\r",
 					"    async deleteCommentByAdmin(commentId, verbose=null) {\r",
-					"        return this.sendRequest(\"DELETE\", `/admin/comments/${commentId}`, null, \"Ошибка при удалении комментария администратором: \", verbose);\r",
+					"        return this.sendRequest(\"DELETE\",\r",
+					"            `/admin/comments/${commentId}`,\r",
+					"            null,\r",
+					"            \"Ошибка при удалении комментария администратором: \",\r",
+					"            verbose);\r",
 					"    }\r",
 					"\r",
-					"    // helper для query-string, вместо URLSearchParams\r",
+					"    // helper для query-string (без URLSearchParams)\r",
 					"    buildQuery(params = {}) {\r",
 					"        const parts = [];\r",
 					"        Object.keys(params).forEach(key => {\r",
 					"            const val = params[key];\r",
 					"            if (val !== null && val !== undefined) {\r",
-					"                parts.push(\r",
-					"                    encodeURIComponent(key) + '=' + encodeURIComponent(String(val))\r",
-					"                );\r",
+					"                parts.push(encodeURIComponent(key) + '=' + encodeURIComponent(String(val)));\r",
 					"            }\r",
 					"        });\r",
 					"        return parts.length ? '?' + parts.join('&') : '';\r",
 					"    }\r",
 					"\r",
-					"    // Публичный список по событию\r",
 					"    async getEventComments(eventId, {from=0, size=10, authorId=null, rangeStart=null, rangeEnd=null} = {}, verbose=null) {\r",
 					"        const query = this.buildQuery({ from, size, authorId, rangeStart, rangeEnd });\r",
-					"        return this.get(\r",
-					"            `/events/${eventId}/comments` + query,\r",
+					"        return this.get(`/events/${eventId}/comments` + query,\r",
 					"            null,\r",
 					"            \"Ошибка при получении комментариев события: \",\r",
-					"            verbose\r",
-					"        );\r",
+					"            verbose);\r",
 					"    }\r",
 					"\r",
-					"    // Список своих комментариев\r",
 					"    async getUserComments(userId, {from=0, size=10, rangeStart=null, rangeEnd=null} = {}, verbose=null) {\r",
 					"        const query = this.buildQuery({ from, size, rangeStart, rangeEnd });\r",
-					"        return this.get(\r",
-					"            `/users/${userId}/comments` + query,\r",
+					"        return this.get(`/users/${userId}/comments` + query,\r",
 					"            null,\r",
 					"            \"Ошибка при получении комментариев пользователя: \",\r",
-					"            verbose\r",
-					"        );\r",
+					"            verbose);\r",
 					"    }\r",
 					"\r",
 					"    async post(path, body, errorText = \"Ошибка при выполнении post-запроса: \", verbose=null) {\r",
@@ -1650,15 +1697,15 @@
 					"                    if (error || (response.code >= 400 && response.code <= 599)) {\r",
 					"                        let err = error ? error : JSON.stringify(response.json());\r",
 					"                        console.error(\r",
-					"                            \"При выполнении запроса к серверу возникла ошика.\\n\", err,\r",
-					"                            \"\\nДля отладки проблемы повторите такой же запрос к вашей программе \" + \r",
-					"                            \"на локальном компьютере. Данные запроса:\\n\", JSON.stringify(request)\r",
+					"                            \"При выполнении запроса к серверу возникла ошика.\\n\",\r",
+					"                            err,\r",
+					"                            \"\\nДля отладки проблемы повторите такой же запрос к вашей программе \" +\r",
+					"                            \"на локальном компьютере. Данные запроса:\\n\",\r",
+					"                            JSON.stringify(request)\r",
 					"                        );\r",
-					"\r",
 					"                        reject(new Error(errorText + err));\r",
 					"                        return;\r",
 					"                    }\r",
-					"\r",
 					"                    try {\r",
 					"                        if (response.stream && response.stream.length > 0) {\r",
 					"                            return resolve(response.json());\r",
@@ -1668,7 +1715,6 @@
 					"                        return resolve(response.text());\r",
 					"                    }\r",
 					"                });\r",
-					"                \r",
 					"            } catch(err) {\r",
 					"                if (verbose) {\r",
 					"                    console.error(errorText, err);\r",
@@ -1738,13 +1784,6 @@
 					"        return 'X'.repeat(len);\r",
 					"    }\r",
 					"\r",
-					"    getRange(hoursBack = 1, hoursForward = 1) {\r",
-					"        const moment = require('moment');\r",
-					"        const start = moment().subtract(hoursBack, 'hour').format('YYYY-MM-DD HH:mm:ss');\r",
-					"        const end   = moment().add(hoursForward, 'hour').format('YYYY-MM-DD HH:mm:ss');\r",
-					"        return { start, end };\r",
-					"    }\r",
-					"\r",
 					"    getFutureDateTime(hourShift = 5, minuteShift=0, yearShift=0) {\r",
 					"        const moment = require('moment');\r",
 					"        let m = moment();\r",
@@ -1765,15 +1804,14 @@
 					"        }\r",
 					"        return result;\r",
 					"    }\r",
-					"}\r",
+					"};\r",
 					"\r",
-					"// ===================== Глобально: Content-Type =====================\r",
+					"// Глобально гарантируем JSON\r",
 					"pm.request.headers.upsert({\r",
 					"    key: 'Content-Type',\r",
 					"    value: 'application/json'\r",
 					"});\r",
-					"\r",
-					" "
+					""
 				]
 			}
 		},
@@ -1848,6 +1886,10 @@
 		},
 		{
 			"key": "adminCommentId",
+			"value": ""
+		},
+		{
+			"key": "commentCreateBody",
 			"value": ""
 		}
 	]
