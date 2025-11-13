@@ -1510,20 +1510,10 @@
 				"exec": [
 					"// ===================== API =====================\r",
 					"API = class {\r",
-					"    constructor(postman, verbose = false) {\r",
+					"    constructor(postman, verbose = false, baseUrl = \"http://localhost:8080\") {\r",
+					"        this.baseUrl = baseUrl;\r",
 					"        this.pm = postman;\r",
 					"        this._verbose = verbose;\r",
-					"\r",
-					"    let fromVars = pm.collectionVariables.get('baseUrl');\r",
-					"\r",
-					"    // если baseUrl не задан или слизан как \"http://\"\r",
-					"    if (!fromVars || fromVars === 'http://' || fromVars === 'http:///') {\r",
-					"        // и локально, и в CI — ходим на localhost:8080\r",
-					"        fromVars = 'http://localhost:8080';\r",
-					"        pm.collectionVariables.set('baseUrl', fromVars);\r",
-					"    }\r",
-					"\r",
-					"    this.baseUrl = fromVars;\r",
 					"    }\r",
 					"\r",
 					"    async addUser(user, verbose=null) {\r",
@@ -1783,20 +1773,7 @@
 					"    value: 'application/json'\r",
 					"});\r",
 					"\r",
-					"// ===== ГЛОБАЛЬНАЯ НОРМАЛИЗАЦИЯ BASEURL ДЛЯ CI И ЛОКАЛЬНО =====\r",
-					"(function forceBaseUrl() {\r",
-					"    // Берём из env или коллекции\r",
-					"    let base = pm.environment.get('baseUrl') || pm.collectionVariables.get('baseUrl');\r",
-					"\r",
-					"    // Если пусто или мусор вроде \"http://\" / \"http:///\"\r",
-					"    if (!base || base === 'http://' || base === 'http:///') {\r",
-					"        base = 'http://localhost:8080';\r",
-					"    }\r",
-					"\r",
-					"    // Жестко прописываем и туда, и туда\r",
-					"    pm.environment.set('baseUrl', base);\r",
-					"    pm.collectionVariables.set('baseUrl', base);\r",
-					"})();"
+					" "
 				]
 			}
 		},
@@ -1815,7 +1792,7 @@
 	"variable": [
 		{
 			"key": "baseUrl",
-			"value": ""
+			"value": "http://localhost:8080"
 		},
 		{
 			"key": "userAId",
