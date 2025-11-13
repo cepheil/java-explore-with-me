@@ -1001,8 +1001,7 @@
 							"listen": "prerequest",
 							"script": {
 								"exec": [
-									"const body = { text: \"Обновленный текст комментария\" };\r",
-									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });"
+									""
 								],
 								"type": "text/javascript",
 								"packages": {},
@@ -1036,6 +1035,15 @@
 					"request": {
 						"method": "PATCH",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"text\": \"Обновленный текст комментария\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
 							"raw": "{{baseUrl}}/users/{{userAId}}/comments/{{userCommentId}}",
 							"host": [
@@ -1058,8 +1066,7 @@
 							"listen": "prerequest",
 							"script": {
 								"exec": [
-									"const body = { text: \"Обновленный текст комментария\" };\r",
-									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });"
+									""
 								],
 								"type": "text/javascript",
 								"packages": {},
@@ -1092,6 +1099,15 @@
 					"request": {
 						"method": "PATCH",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"text\": \"Обновленный текст комментария\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
 							"raw": "{{baseUrl}}/users/{{userAId}}/comments/{{userCommentId}}",
 							"host": [
@@ -1114,7 +1130,7 @@
 							"listen": "prerequest",
 							"script": {
 								"exec": [
-									"pm.request.body.update({ mode: 'raw', raw: JSON.stringify({ text: \"Попытка изменить чужой комментарий\" }) });"
+									""
 								],
 								"type": "text/javascript",
 								"packages": {},
@@ -1138,6 +1154,15 @@
 					"request": {
 						"method": "PATCH",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"text\": \"Попытка изменить чужой комментарий\" }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
 							"raw": "{{baseUrl}}/users/{{userBId}}/comments/{{userCommentId}}",
 							"host": [
