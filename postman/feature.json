@@ -1266,48 +1266,45 @@
 									"  const api = new API(pm);\r",
 									"  const rnd = new RandomUtils();\r",
 									"\r",
-									"  // 1. создаём инициатора и участника\r",
+									"  // 1. Инициатор и участник\r",
 									"  const initiator = await api.addUser(rnd.getUser());\r",
 									"  const participant = await api.addUser(rnd.getUser());\r",
-									"  pm.collectionVariables.set('policyInitiatorId', initiator.id);\r",
-									"  pm.collectionVariables.set('policyUserId', participant.id);\r",
 									"\r",
-									"  // 2. категория\r",
+									"  // 2. Категория\r",
 									"  const cat = await api.addCategory(rnd.getCategory());\r",
-									"  pm.collectionVariables.set('policyCategoryId', cat.id);\r",
 									"\r",
-									"  // 3. событие с commentableBy = PARTICIPANTS\r",
+									"  // 3. Событие с commentableBy = PARTICIPANTS\r",
 									"  const eventBody = rnd.getEvent(cat.id);\r",
 									"  eventBody.commentableBy = \"PARTICIPANTS\";\r",
-									" \r",
-									"  // eventBody.requestModeration = true;\r",
-									"  const event = await api.addEvent(initiator.id, eventBody);\r",
-									"  pm.collectionVariables.set('policyEventId', event.id);\r",
 									"\r",
-									"  // 4. публикуем событие\r",
+									"  const event = await api.addEvent(initiator.id, eventBody);\r",
 									"  await api.publishEvent(event.id);\r",
 									"\r",
-									"  // 5. создаём заявку участника\r",
+									"  // 4. Заявка участника\r",
 									"  const req = await api.publishParticipationRequest(event.id, participant.id);\r",
 									"\r",
-									"  // 6. подтверждаем заявку, ТОЛЬКО если она ещё PENDING\r",
+									"  // 5. Подтверждаем, только если PENDING\r",
 									"  if (req.status === 'PENDING') {\r",
 									"    await api.acceptParticipationRequest(event.id, initiator.id, req.id);\r",
 									"  }\r",
 									"\r",
-									"  // 7. готовим URL и тело комментария\r",
-									"  const baseUrl = pm.collectionVariables.get('baseUrl') || 'http://localhost:8080';\r",
-									"  const fullUrl = `${baseUrl}/users/${participant.id}/events/${event.id}/comments`;\r",
-									"  pm.request.url = fullUrl;\r",
-									"\r",
-									"  const body = { text: rnd.getComment() };\r",
-									"  pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });\r",
+									"  // 6. Сохраняем переменные для URL и тела\r",
+									"  pm.collectionVariables.set('policyUserId', participant.id);\r",
+									"  pm.collectionVariables.set('policyEventId', event.id);\r",
+									"  pm.collectionVariables.set('commentBody', JSON.stringify({\r",
+									"    text: rnd.getComment()\r",
+									"  }));\r",
 									"};\r",
 									"\r",
 									"const interval = setInterval(() => {}, 1000);\r",
 									"setTimeout(async () => {\r",
-									"  try { await main(); } finally { clearInterval(interval); }\r",
-									"}, 50);"
+									"  try {\r",
+									"    await main();\r",
+									"  } finally {\r",
+									"    clearInterval(interval);\r",
+									"  }\r",
+									"}, 50);\r",
+									""
 								],
 								"type": "text/javascript",
 								"packages": {},
@@ -1339,6 +1336,15 @@
 					"request": {
 						"method": "POST",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{{commentBody}}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
 							"raw": "{{baseUrl}}/users/{{policyUserId}}/events/{{policyEventId}}/comments",
 							"host": [
@@ -1366,36 +1372,39 @@
 									"  const api = new API(pm);\r",
 									"  const rnd = new RandomUtils();\r",
 									"\r",
-									"  // 1. инициатор и пользователь без заявки\r",
+									"  // 1. Инициатор и \"левый\" пользователь без заявки\r",
 									"  const initiator = await api.addUser(rnd.getUser());\r",
 									"  const stranger  = await api.addUser(rnd.getUser());\r",
 									"\r",
-									"  // 2. категория\r",
+									"  // 2. Категория\r",
 									"  const cat = await api.addCategory(rnd.getCategory());\r",
 									"\r",
-									"  // 3. событие с commentableBy = PARTICIPANTS\r",
+									"  // 3. Событие с commentableBy = PARTICIPANTS\r",
 									"  const eventBody = rnd.getEvent(cat.id);\r",
 									"  eventBody.commentableBy = \"PARTICIPANTS\";\r",
-									"  const event = await api.addEvent(initiator.id, eventBody);\r",
 									"\r",
-									"  // 4. публикуем событие\r",
+									"  const event = await api.addEvent(initiator.id, eventBody);\r",
 									"  await api.publishEvent(event.id);\r",
 									"\r",
-									"  // 5. НИКАКИХ заявок/подтверждений не создаём\r",
+									"  // 4. НИКАКИХ заявок не создаём и не подтверждаем\r",
 									"\r",
-									"  // 6. URL и тело запроса\r",
-									"  const baseUrl = pm.collectionVariables.get('baseUrl') || 'http://localhost:8080';\r",
-									"  const fullUrl = `${baseUrl}/users/${stranger.id}/events/${event.id}/comments`;\r",
-									"  pm.request.url = fullUrl;\r",
-									"\r",
-									"  const body = { text: rnd.getComment() };\r",
-									"  pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });\r",
+									"  // 5. Переменные для URL и тела комментария\r",
+									"  pm.collectionVariables.set('policyUserId', stranger.id);\r",
+									"  pm.collectionVariables.set('policyEventId', event.id);\r",
+									"  pm.collectionVariables.set('commentBody', JSON.stringify({\r",
+									"    text: rnd.getComment()\r",
+									"  }));\r",
 									"};\r",
 									"\r",
 									"const interval = setInterval(() => {}, 1000);\r",
 									"setTimeout(async () => {\r",
-									"  try { await main(); } finally { clearInterval(interval); }\r",
-									"}, 50);"
+									"  try {\r",
+									"    await main();\r",
+									"  } finally {\r",
+									"    clearInterval(interval);\r",
+									"  }\r",
+									"}, 50);\r",
+									""
 								],
 								"type": "text/javascript",
 								"packages": {},
@@ -1419,6 +1428,15 @@
 					"request": {
 						"method": "POST",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{{commentBody}}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
 							"raw": "{{baseUrl}}/users/{{policyUserId}}/events/{{policyEventId}}/comments",
 							"host": [
@@ -1915,6 +1933,10 @@
 		},
 		{
 			"key": "commentCreateBody",
+			"value": ""
+		},
+		{
+			"key": "commentBody",
 			"value": ""
 		}
 	]
