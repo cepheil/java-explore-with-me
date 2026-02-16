@@ -4,6 +4,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ru.practicum.category.dto.CategoryDto;
 import ru.practicum.event.dto.*;
+import ru.practicum.event.enums.CommentableBy;
 import ru.practicum.event.model.Event;
 import ru.practicum.user.dto.UserShortDto;
 
@@ -20,6 +21,7 @@ public final class EventMapper {
                 .paid(Boolean.TRUE.equals(dto.getPaid()))
                 .participantLimit(dto.getParticipantLimit() == null ? 0 : dto.getParticipantLimit())
                 .requestModeration(dto.getRequestModeration() == null ? true : dto.getRequestModeration())
+                .commentableBy(dto.getCommentableBy() == null ? CommentableBy.ALL : dto.getCommentableBy())
                 .build();
 
     }

@@ -56,7 +56,7 @@ public class EventEnricher {
                 try {
                     long id = Long.parseLong(uri.substring(slash + 1));
                     long hits = (s.getHits() != null) ? s.getHits() : 0L;
-                    result.merge(id, hits, Long::sum);                         //result.put(id, hits);
+                    result.merge(id, hits, Long::sum);
                 } catch (NumberFormatException ignored) {
                     log.warn("Failed to parse event ID from URI: {}", uri);
                 }
@@ -73,7 +73,7 @@ public class EventEnricher {
         TimeRange range = normalizeRange(rangeStart, rangeEnd);
         List<Long> ids = events.stream().map(Event::getId).toList();
         Map<Long, Integer> confirmed = loadConfirmedMap(ids);
-        Map<Long, Long> views = loadViewsMap(ids, range.start, range.end);
+        Map<Long, Long> views = loadViewsMap(ids, range.start(), range.end());
         return events.stream()
                 .map(e -> EventMapper.toShortDto(
                         e,

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import ru.practicum.event.enums.CommentableBy;
 import ru.practicum.utill.DateTimeConstants;
 
 
@@ -45,5 +46,7 @@ public class NewEventDto {
     private Integer participantLimit = 0;
 
     private Boolean requestModeration;
+
+    private CommentableBy commentableBy;
 
 }
