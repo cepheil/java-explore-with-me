@@ -1,11 +1,36 @@
-https://github.com/cepheil/java-explore-with-me/pull/4
-
 #  Explore-with-me
 Приложение **Explore with me** — афиша. В этой афише можно предложить какое-либо событие от выставки до похода в кино и собрать компанию для участия в нём.
 
----  
-### Структура проекта
-Проект состоит из двух основных модулей:
+## Стек технологий
+
+- **Java 21**, **Spring Boot 3.3.2**
+- **Spring Data JPA** + **Hibernate** + **JPA Specifications**
+- **PostgreSQL 16.1**
+- **Docker** / **Docker Compose**
+- **Maven** (многомодульная сборка)
+- **Lombok**, **Jakarta Bean Validation**
+- **Checkstyle**, **SpotBugs**, **JaCoCo**
+
+---
+
+## Архитектура
+
+Проект состоит из двух микросервисов, каждый со своей базой данных PostgreSQL:
+
+```
+┌────────────────────┐         REST          ┌────────────────────┐
+│                    │ ──────────────────────▶│                    │
+│   Main Service     │    GET /stats         │   Stats Service    │
+│   (порт 8080)      │    POST /hit          │   (порт 9090)      │
+│                    │◀──────────────────────│                    │
+└────────┬───────────┘                       └────────┬───────────┘
+         │                                            │
+         ▼                                            ▼
+┌────────────────────┐                       ┌────────────────────┐
+│   PostgreSQL       │                       │   PostgreSQL       │
+│   ewm-main :5433   │                       │   ewm-stats :5432  │
+└────────────────────┘                       └────────────────────┘
+```
 
 #### EWM-Service
 Основной сервис приложения, который включает в себя:
@@ -17,17 +42,48 @@ https://github.com/cepheil/java-explore-with-me/pull/4
 Сервис статистики, который:
 - Собирает информацию о просмотрах событий
 - Предоставляет статистические данные по запросам
---- 
+
+Разделён на три Maven-подмодуля:
+- `dto` — общие DTO для межсервисного взаимодействия
+- `client` — REST-клиент (`StatClient`), подключаемый как зависимость в main-service
+- `server` — REST API сервиса статистики
+
+**Граф зависимостей:** `main-service → stats-client → stats-dto ← stats-server`
+
+---
 
 ### ER-диаграмма
 
 ![Schema.png](Schema.png)
 
+---
+
+## API
+
+### Main Service
+
+| Уровень | Префикс | Описание |
+|---------|---------|----------|
+| Публичный | `/events`, `/categories`, `/compilations` | Поиск и просмотр событий, категорий, подборок |
+| Приватный | `/users/{userId}/events`, `/users/{userId}/requests` | Создание событий, управление своими заявками |
+| Админский | `/admin/users`, `/admin/events`, `/admin/categories`, `/admin/compilations` | Модерация событий, управление пользователями и категориями |
+
+### Stats Service
+
+| Метод | Эндпоинт | Описание |
+|-------|----------|----------|
+| `POST` | `/hit` | Сохранить факт обращения к эндпоинту |
+| `GET` | `/stats` | Получить статистику просмотров с фильтрацией по дате, URI и уникальности IP |
+
+Полные спецификации API: [`ewm-main-service-spec.json`](ewm-main-service-spec.json), [`ewm-stats-service-spec.json`](ewm-stats-service-spec.json)
+
+---
+
 ## 🗨️ Feature: Комментарии к событиям (comments)
 
-Функциональность реализована в рамках дополнительного этапа дипломного проекта **Explore With Me**.  
-Добавлена возможность пользователям оставлять комментарии к событиям, редактировать и удалять их,  
-а также получать списки комментариев по событиям и авторам.  
+Функциональность реализована в рамках дополнительного этапа дипломного проекта **Explore With Me**.
+Добавлена возможность пользователям оставлять комментарии к событиям, редактировать и удалять их,
+а также получать списки комментариев по событиям и авторам.
 Администраторы могут модерировать комментарии, удаляя их при необходимости.
 
 ### 🔧 Бизнес-логика и правила
@@ -50,13 +106,13 @@ https://github.com/cepheil/java-explore-with-me/pull/4
 
 ---
 
- ### Эндпоинты API
+### Эндпоинты API комментариев
 
 #### 🔹 Публичные
 ```http
 GET /events/{eventId}/comments?from={int}&size={int}&authorId={optional}&rangeStart={optional}&rangeEnd={optional}
 ```
-Возвращает список комментариев к опубликованному событию.  
+Возвращает список комментариев к опубликованному событию.
 Параметры `authorId`, `rangeStart`, `rangeEnd` необязательны.
 
 #### 🔹 Пользовательские
@@ -64,22 +120,20 @@ GET /events/{eventId}/comments?from={int}&size={int}&authorId={optional}&rangeSt
 GET /users/{userId}/comments?from={int}&size={int}&rangeStart={optional}&rangeEnd={optional}
 ```
 Возвращает список комментариев, созданных пользователем.
-##
+
 ```http
 POST /users/{userId}/events/{eventId}/comments
 ```
-Создаёт новый комментарий.  
+Создаёт новый комментарий.
 Тело запроса:
 ```json
 { "text": "Отличное событие!" }
 ```
-##
 
 ```http
 PATCH /users/{userId}/comments/{commentId}
 ```
 Обновляет текст комментария (только автор может редактировать).
-##
 
 ```http
 DELETE /users/{userId}/comments/{commentId}
@@ -93,6 +147,7 @@ DELETE /admin/comments/{commentId}
 Удаляет комментарий независимо от автора и события.
 
 ---
+
 ### 🧩 Используемые классы и DTO
 
 | Компонент | Назначение |
@@ -108,4 +163,13 @@ DELETE /admin/comments/{commentId}
 
 ---
 
- 
+## Запуск
+
+```bash
+mvn clean package -DskipTests
+docker-compose up -d
+```
+
+После запуска:
+- Main Service: http://localhost:8080
+- Stats Service: http://localhost:9090
